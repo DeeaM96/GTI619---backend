@@ -56,12 +56,12 @@ public class JwtUtils {
         .parseClaimsJws(token).getBody().getSubject();
   }
 
-
-
   private Key key() {
-    // Secure key generation
-    return Keys.secretKeyFor(SignatureAlgorithm.HS256); // Using HS256 algorithm
+    return Keys.hmacShaKeyFor(Decoders.BASE64.decode(jwtSecret));
   }
+
+
+
 
   public boolean validateJwtToken(String authToken) {
     try {

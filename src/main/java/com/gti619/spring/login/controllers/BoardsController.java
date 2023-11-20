@@ -11,7 +11,7 @@ import org.springframework.web.bind.annotation.RestController;
 //@CrossOrigin(origins = "*", maxAge = 3600)
 @RestController
 @RequestMapping("/api/test")
-public class TestController {
+public class BoardsController {
   @GetMapping("/all")
   public String allAccess() {
     return "Public Content.";
@@ -24,20 +24,29 @@ public class TestController {
   }
 
   @GetMapping("/prep_res")
-  @PreAuthorize("hasRole('ROLE_PREP_RES')")
+  @PreAuthorize("hasRole('ROLE_PREP_RES') or hasRole('ROLE_ADMIN')  ")
   public String prep_res_access() {
     return "ROLE_PREP_RES Board.";
   }
 
   @GetMapping("/prep_aff")
-  @PreAuthorize("hasRole('ROLE_PREP_AFF')")
+  @PreAuthorize("hasRole('ROLE_PREP_AFF') or hasRole('ROLE_ADMIN') ")
   public String prep_aff_access() {
     return "ROLE_PREP_AFF Board.";
   }
+
+
+  public String utilisateursBoard() {
+    return "Liste Utilisateurs";
+  }
+
+
 
   @GetMapping("/admin")
   @PreAuthorize("hasRole('ROLE_ADMIN')")
   public String adminAccess() {
     return "Admin Board.";
   }
+
+
 }

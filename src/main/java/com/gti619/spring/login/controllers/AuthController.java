@@ -5,6 +5,8 @@ import java.util.List;
 import java.util.Set;
 import java.util.stream.Collectors;
 
+import com.gti619.spring.login.payload.request.ChangePasswordRequest;
+import com.gti619.spring.login.payload.request.UpdateRoleRequest;
 import com.gti619.spring.login.payload.request.LoginRequest;
 import com.gti619.spring.login.payload.request.SignupRequest;
 import com.gti619.spring.login.payload.response.MessageResponse;
@@ -14,12 +16,15 @@ import jakarta.validation.Valid;
 
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpHeaders;
+import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseCookie;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
+import org.springframework.security.core.userdetails.UsernameNotFoundException;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.web.bind.annotation.CrossOrigin;
 import org.springframework.web.bind.annotation.PostMapping;
@@ -135,10 +140,81 @@ public class AuthController {
     return ResponseEntity.ok(new MessageResponse("User registered successfully!"));
   }
 
+  @PostMapping("/createUser")
+  public ResponseEntity<?> createUser(@Valid @RequestBody SignupRequest signUpRequest) {
+    return this.registerUser(signUpRequest);
+  }
+
+
   @PostMapping("/signout")
   public ResponseEntity<?> logoutUser() {
     ResponseCookie cookie = jwtUtils.getCleanJwtCookie();
     return ResponseEntity.ok().header(HttpHeaders.SET_COOKIE, cookie.toString())
         .body(new MessageResponse("You've been signed out!"));
+  }
+
+
+  @PostMapping("/updateRole")
+  @PreAuthorize("hasRole('ROLE_ADMIN')")
+  public ResponseEntity<?> updateRole(@Valid @RequestBody UpdateRoleRequest updateRoleRequest) {
+    User user = userRepository.findByUsername(updateRoleRequest.getUsername())
+            .orElseThrow(() -> new RuntimeException("Error: User is not found."));
+
+    // Clear existing roles
+    user.getRoles().clear();
+
+    // Add new roles
+    Set<Role> updatedRoles = new HashSet<>();
+
+    Set<String> strRoles = updateRoleRequest.getNewRoles();
+    if (strRoles == null) {
+      Role userRole = roleRepository.findByName(ERole.ROLE_USER)
+              .orElseThrow(() -> new RuntimeException("Error: Role is not found."));
+      updatedRoles.add(userRole);
+    }else {
+      updateRoleRequest.getNewRoles().forEach(role -> {
+        switch (role) {
+          case "admin":
+            Role adminRole = roleRepository.findByName(ERole.ROLE_ADMIN)
+                    .orElseThrow(() -> new RuntimeException("Error: Role is not found."));
+            updatedRoles.add(adminRole);
+            break;
+          case "prep_aff":
+            Role role_prep_aff = roleRepository.findByName(ERole.ROLE_PREP_AFF)
+                    .orElseThrow(() -> new RuntimeException("Error: Role is not found."));
+            updatedRoles.add(role_prep_aff);
+            break;
+          case "prep_res":
+            Role role_prep_red = roleRepository.findByName(ERole.ROLE_PREP_RES)
+                    .orElseThrow(() -> new RuntimeException("Error: Role is not found."));
+            updatedRoles.add(role_prep_red);
+            break;
+
+        }
+      });
+    }
+
+
+
+    user.setRoles(updatedRoles);
+    userRepository.save(user);
+
+    return ResponseEntity.ok(new MessageResponse("User roles updated successfully!"));
+  }
+
+
+  @PostMapping("/change-password")
+  public ResponseEntity<?> changeUserPassword(@RequestBody ChangePasswordRequest changePasswordRequest) {
+    try {
+      User user = userRepository.findById(changePasswordRequest.getUserId())
+              .orElseThrow(() -> new UsernameNotFoundException("User Not Found with id: " + changePasswordRequest.getUserId()));
+
+      user.setPassword(encoder.encode(changePasswordRequest.getUserPassword()));
+      userRepository.save(user);
+
+      return ResponseEntity.ok(new MessageResponse("Password changed successfully!"));
+    } catch (UsernameNotFoundException e) {
+      return new ResponseEntity<>(e.getMessage(), HttpStatus.NOT_FOUND);
+    }
   }
 }
