@@ -15,4 +15,8 @@ public class ChangePasswordRequest {
         this.userId = userId;
         this.userPassword = userPassword;
     }
+
+    public ChangePasswordRequest() {
+
+    }
 }

@@ -40,7 +40,7 @@ import com.gti619.spring.login.repository.UserRepository;
 import com.gti619.spring.login.security.services.UserDetailsImpl;
 
 //for Angular Client (withCredentials)
-@CrossOrigin(origins = "http://localhost:4200", maxAge = 3600, allowCredentials="true")
+@CrossOrigin(origins = "http://localhost:4200,http://localhost:4200", maxAge = 3600, allowCredentials="true")
 //@CrossOrigin(origins = "*", maxAge = 3600)
 @RestController
 @RequestMapping("/api/auth")
@@ -141,7 +141,12 @@ public class AuthController {
   }
 
   @PostMapping("/createUser")
+  @PreAuthorize("hasRole('ROLE_ADMIN') ")
   public ResponseEntity<?> createUser(@Valid @RequestBody SignupRequest signUpRequest) {
+    String validationMessage = validatePassword(signUpRequest.getPassword());
+    if (!validationMessage.equals("Valid")) {
+      return ResponseEntity.badRequest().body(new MessageResponse(validationMessage));
+    }
     return this.registerUser(signUpRequest);
   }
 
@@ -209,6 +214,11 @@ public class AuthController {
       User user = userRepository.findById(changePasswordRequest.getUserId())
               .orElseThrow(() -> new UsernameNotFoundException("User Not Found with id: " + changePasswordRequest.getUserId()));
 
+      String validationMessage = validatePassword(changePasswordRequest.getUserPassword());
+      if (!validationMessage.equals("Valid")) {
+        return ResponseEntity.badRequest().body(new MessageResponse(validationMessage));
+      }
+
       user.setPassword(encoder.encode(changePasswordRequest.getUserPassword()));
       userRepository.save(user);
 
@@ -217,4 +227,24 @@ public class AuthController {
       return new ResponseEntity<>(e.getMessage(), HttpStatus.NOT_FOUND);
     }
   }
+
+  private String validatePassword(String password) {
+    if (password.length() < 6) {
+      return "Le mot de passe doit contenir au moins 6 caractères.";
+    }
+    if (!password.matches(".*[A-Z].*")) {
+      return "Le mot de passe doit contenir au moins un caractère majuscule.";
+    }
+    if (!password.matches(".*[a-z].*")) {
+      return "Le mot de passe doit contenir au moins un caractère minuscule.";
+    }
+    if (!password.matches(".*[0-9].*")) {
+      return "Le mot de passe doit contenir au moins un chiffre.";
+    }
+    if (!password.matches(".*[!@#$%^&*(),.?\":{}|<>].*")) {
+      return "Le mot de passe doit contenir au moins un caractère spécial.";
+    }
+    return "Valide";
+  }
+
 }
