@@ -62,8 +62,12 @@ public class UserService {
         user.setLoginAttempt(new Date());
         user.setTentatives(tentatives + 1);
 
-        if (tentatives >= 5) {
+        if (tentatives >= 2 && tentatives <=4) {
             user.setBlocked(true);
+        }
+
+        if (tentatives >= 5) {
+            user.setDisabled(true);
         }
 
         userRepository.save(user);

@@ -13,11 +13,15 @@ public class ChangePasswordRequest {
 
     private boolean blocked;
 
+    private boolean disabled;
+
     public ChangePasswordRequest(Long userId, String userPassword, boolean blocked) {
         this.userId = userId;
         this.userPassword = userPassword;
         this.blocked = blocked;
     }
+
+
 
     public ChangePasswordRequest() {
 

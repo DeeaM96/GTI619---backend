@@ -42,6 +42,8 @@ public class User {
 
   private boolean blocked;
 
+  private boolean disabled;
+
   @Column(name = "last_login")
   private Date lastLogin;
 
@@ -136,5 +138,13 @@ public class User {
 
   public void setRoles(Set<Role> roles) {
     this.roles = roles;
+  }
+
+  public boolean isDisabled() {
+    return disabled;
+  }
+
+  public void setDisabled(boolean disabled) {
+    this.disabled = disabled;
   }
 }

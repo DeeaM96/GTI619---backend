@@ -6,6 +6,7 @@ import java.util.List;
 import java.util.Set;
 import java.util.stream.Collectors;
 
+import com.gti619.spring.login.models.PasswordHistory;
 import com.gti619.spring.login.payload.request.ChangePasswordRequest;
 import com.gti619.spring.login.payload.request.UpdateRoleRequest;
 import com.gti619.spring.login.payload.request.LoginRequest;
@@ -13,8 +14,11 @@ import com.gti619.spring.login.payload.request.SignupRequest;
 import com.gti619.spring.login.payload.response.MessageResponse;
 import com.gti619.spring.login.payload.response.UserBlockedResponse;
 import com.gti619.spring.login.payload.response.UserInfoResponse;
+import com.gti619.spring.login.repository.PasswordHistoryRepository;
 import com.gti619.spring.login.security.jwt.JwtUtils;
 import com.gti619.spring.login.security.services.UserDetailsServiceImpl;
+import com.gti619.spring.login.services.SecurityConfigService;
+import com.gti619.spring.login.services.UserActivityService;
 import com.gti619.spring.login.services.UserService;
 import jakarta.validation.Valid;
 
@@ -60,6 +64,12 @@ public class AuthController {
     RoleRepository roleRepository;
 
     @Autowired
+    PasswordHistoryRepository passwordHistoryRepository;
+
+    @Autowired
+    UserActivityService userActivityService;
+
+    @Autowired
     PasswordEncoder encoder;
 
     @Autowired
@@ -67,6 +77,9 @@ public class AuthController {
 
     @Autowired
     UserService userService;
+
+    @Autowired
+    SecurityConfigService securityConfigService;
 
     @PostMapping("/signin")
     public ResponseEntity<?> authenticateUser(@Valid @RequestBody LoginRequest loginRequest) {
@@ -79,7 +92,29 @@ public class AuthController {
             UserDetailsImpl userDetails = (UserDetailsImpl) authentication.getPrincipal();
 
             User user = userService.findByUsername(userDetails.getUsername());
+            if (user.getLoginAttempt() != null) {
+                long timeSinceLastAttempt = new Date().getTime() - user.getLoginAttempt().getTime();
+                long waitTime = 5 * 60 * 1000; // 5 minutes in milliseconds
+                if (timeSinceLastAttempt < waitTime) {
+                    long remainingTime = waitTime - timeSinceLastAttempt;
+                    String errorMessage="Login attempt blocked. Please try again after " + remainingTime / 1000 + " seconds.";
+                    userActivityService.logUserActivity(user.getId(), "LOGIN", false,errorMessage);
 
+                    return ResponseEntity
+                            .status(HttpStatus.TOO_MANY_REQUESTS)
+                            .body(errorMessage);
+                }
+            }
+
+            if(user.isDisabled()){
+                String errorMessage="Login attempt blocked. Please contact an administrator";
+                userActivityService.logUserActivity(user.getId(), "LOGIN", false,errorMessage);
+
+                return ResponseEntity
+                        .status(HttpStatus.BAD_REQUEST)
+                        .body(errorMessage);
+
+            }
 
             ResponseCookie jwtCookie = jwtUtils.generateJwtCookie(userDetails);
 
@@ -91,6 +126,8 @@ public class AuthController {
 
 
             if (user.getBlocked()) {
+                userActivityService.logUserActivity(user.getId(), "LOGIN", false,"User blocked, must change password");
+
                 return ResponseEntity
                         .status(HttpStatus.FORBIDDEN).header(HttpHeaders.SET_COOKIE, jwtCookie.toString())
                         .body(new UserInfoResponse(userDetails.getId(),
@@ -101,6 +138,7 @@ public class AuthController {
                         ));
             }
 
+            userActivityService.logUserActivity(user.getId(), "LOGIN", true,null);
 
             return ResponseEntity.ok().header(HttpHeaders.SET_COOKIE, jwtCookie.toString())
                     .body(new UserInfoResponse(userDetails.getId(),
@@ -246,18 +284,53 @@ public class AuthController {
 
     @PostMapping("/change-password")
     public ResponseEntity<?> changeUserPassword(@RequestBody ChangePasswordRequest changePasswordRequest) {
+        Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
+
+        // Check if the user has the ADMIN role
+        boolean isAdmin = authentication.getAuthorities().stream()
+                .anyMatch(authority -> authority.getAuthority().equals("ROLE_ADMIN"));
+
+        String activity_type=isAdmin? "ADMIN_PASSWORD_CHANGE" : "PASSWORD_CHANGE";
+
+
         try {
             User user = userRepository.findById(changePasswordRequest.getUserId())
                     .orElseThrow(() -> new UsernameNotFoundException("User Not Found with id: " + changePasswordRequest.getUserId()));
 
+            List<PasswordHistory> lastPasswords = passwordHistoryRepository.findTop5ByUserOrderByChangeDateDesc(user);
+            boolean isRepeated = lastPasswords.stream()
+                    .anyMatch(history -> encoder.matches(changePasswordRequest.getUserPassword(), history.getPassword()));
+
+            if (isRepeated) {
+                String errorMessage="The new password cannot be the same as the last 5 passwords.";
+                userActivityService.logUserActivity(user.getId(), activity_type, false,errorMessage);
+
+                return ResponseEntity.badRequest().body(errorMessage);
+            }
+
             String validationMessage = validatePassword(changePasswordRequest.getUserPassword());
             if (!validationMessage.equals("Valid")) {
+                userActivityService.logUserActivity(user.getId(), activity_type, false,validationMessage);
+
                 return ResponseEntity.badRequest().body(new MessageResponse(validationMessage));
             }
 
             user.setPassword(encoder.encode(changePasswordRequest.getUserPassword()));
             user.setBlocked(changePasswordRequest.isBlocked());
+
+            if(isAdmin){
+                user.setBlocked(false);
+                user.setDisabled(false);
+            }
             userRepository.save(user);
+
+            PasswordHistory newHistory = new PasswordHistory();
+            newHistory.setUser(user);
+            newHistory.setPassword(user.getPassword());
+            newHistory.setChangeDate(new Date());
+            passwordHistoryRepository.save(newHistory);
+
+            userActivityService.logUserActivity(user.getId(), activity_type, true, null);
 
             return ResponseEntity.ok(new MessageResponse("Password changed successfully!"));
         } catch (UsernameNotFoundException e) {
