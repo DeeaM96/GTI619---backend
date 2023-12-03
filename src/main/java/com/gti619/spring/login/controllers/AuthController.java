@@ -23,6 +23,8 @@ import com.gti619.spring.login.services.UserService;
 import jakarta.validation.Valid;
 
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseCookie;
@@ -92,13 +94,15 @@ public class AuthController {
             UserDetailsImpl userDetails = (UserDetailsImpl) authentication.getPrincipal();
 
             User user = userService.findByUsername(userDetails.getUsername());
+            String intervalConfig = securityConfigService.getConfigValue("LOGIN_ENTRY_INTERVAL");
+            long waitTime = intervalConfig != null ? Long.parseLong(intervalConfig) : 5 * 60 * 1000; // Utilisez la valeur par défaut si non configurée
+
             if (user.getLoginAttempt() != null) {
                 long timeSinceLastAttempt = new Date().getTime() - user.getLoginAttempt().getTime();
-                long waitTime = 5 * 60 * 1000; // 5 minutes in milliseconds
                 if (timeSinceLastAttempt < waitTime) {
                     long remainingTime = waitTime - timeSinceLastAttempt;
-                    String errorMessage="Login attempt blocked. Please try again after " + remainingTime / 1000 + " seconds.";
-                    userActivityService.logUserActivity(user.getId(), "LOGIN", false,errorMessage);
+                    String errorMessage = "Login attempt blocked. Please try again after " + remainingTime / 1000 + " seconds.";
+                    userActivityService.logUserActivity(user.getId(), "LOGIN", false, errorMessage);
 
                     return ResponseEntity
                             .status(HttpStatus.TOO_MANY_REQUESTS)
@@ -297,16 +301,22 @@ public class AuthController {
             User user = userRepository.findById(changePasswordRequest.getUserId())
                     .orElseThrow(() -> new UsernameNotFoundException("User Not Found with id: " + changePasswordRequest.getUserId()));
 
-            List<PasswordHistory> lastPasswords = passwordHistoryRepository.findTop5ByUserOrderByChangeDateDesc(user);
+            String reuseConfig = securityConfigService.getConfigValue("PASSWORD_REUSE_HISTORY");
+            int reuseHistory = reuseConfig != null ? Integer.parseInt(reuseConfig) : 5; // Default to 5 if not configured
+
+            Pageable topN = PageRequest.of(0, reuseHistory);
+            List<PasswordHistory> lastPasswords = passwordHistoryRepository.findTopNByUserOrderByChangeDateDesc(user, topN);
+
             boolean isRepeated = lastPasswords.stream()
                     .anyMatch(history -> encoder.matches(changePasswordRequest.getUserPassword(), history.getPassword()));
 
             if (isRepeated) {
-                String errorMessage="The new password cannot be the same as the last 5 passwords.";
-                userActivityService.logUserActivity(user.getId(), activity_type, false,errorMessage);
+                String errorMessage = "The new password cannot be the same as the last " + reuseHistory + " passwords.";
+                userActivityService.logUserActivity(user.getId(), "PASSWORD_CHANGE", false, errorMessage);
 
                 return ResponseEntity.badRequest().body(errorMessage);
             }
+
 
             String validationMessage = validatePassword(changePasswordRequest.getUserPassword());
             if (!validationMessage.equals("Valid")) {
@@ -321,6 +331,7 @@ public class AuthController {
             if(isAdmin){
                 user.setBlocked(false);
                 user.setDisabled(false);
+                user.setTentatives(0);
             }
             userRepository.save(user);
 
@@ -339,19 +350,26 @@ public class AuthController {
     }
 
     private String validatePassword(String password) {
-        if (password.length() < 6) {
-            return "Le mot de passe doit contenir au moins 6 caractères.";
+        String minLengthConfig = securityConfigService.getConfigValue("PASSWORD_MIN_LENGTH");
+        int minLength = minLengthConfig != null ? Integer.parseInt(minLengthConfig) : 6; // Valeur par défaut
+
+        if (password.length() < minLength) {
+            return "Le mot de passe doit contenir au moins " + minLength + " caractères.";
         }
-        if (!password.matches(".*[A-Z].*")) {
+
+        if (Boolean.parseBoolean(securityConfigService.getConfigValue("PASSWORD_REQUIRE_UPPERCASE")) && !password.matches(".*[A-Z].*")) {
             return "Le mot de passe doit contenir au moins un caractère majuscule.";
         }
-        if (!password.matches(".*[a-z].*")) {
+
+        if (Boolean.parseBoolean(securityConfigService.getConfigValue("PASSWORD_REQUIRE_LOWERCASE")) && !password.matches(".*[a-z].*")) {
             return "Le mot de passe doit contenir au moins un caractère minuscule.";
         }
-        if (!password.matches(".*[0-9].*")) {
+
+        if (Boolean.parseBoolean(securityConfigService.getConfigValue("PASSWORD_REQUIRE_DIGITS")) && !password.matches(".*[0-9].*")) {
             return "Le mot de passe doit contenir au moins un chiffre.";
         }
-        if (!password.matches(".*[!@#$%^&*(),.?\":{}|<>].*")) {
+
+        if (Boolean.parseBoolean(securityConfigService.getConfigValue("PASSWORD_REQUIRE_SPECIAL")) && !password.matches(".*[!@#$%^&*(),.?\":{}|<>].*")) {
             return "Le mot de passe doit contenir au moins un caractère spécial.";
         }
         return "Valid";

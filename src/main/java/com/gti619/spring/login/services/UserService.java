@@ -56,22 +56,34 @@ public class UserService {
         userRepository.save(user);
     }
 
+    @Autowired
+    private SecurityConfigService securityConfigService;
+
     public void handleFailedLogin(String username) {
-        User user = userRepository.findByUsername(username).orElseThrow(() -> new UsernameNotFoundException("User Not Found with username: " + username));
+        User user = userRepository.findByUsername(username)
+                .orElseThrow(() -> new UsernameNotFoundException("User Not Found with username: " + username));
+
         Integer tentatives = user.getTentatives() == null ? 0 : user.getTentatives();
         user.setLoginAttempt(new Date());
         user.setTentatives(tentatives + 1);
 
-        if (tentatives >= 2 && tentatives <=4) {
+        String maxLoginAttemptsConfig = securityConfigService.getConfigValue("MAX_LOGIN_ATTEMPTS");
+        int maxLoginAttempts = maxLoginAttemptsConfig != null ? Integer.parseInt(maxLoginAttemptsConfig) : 5; // Valeur par défaut
+
+        String maxLoginAttemptsBeforeDisableConfig = securityConfigService.getConfigValue("MAX_LOGIN_ATTEMPTS_BEFORE_DISABLE");
+        int maxLoginAttemptsBeforeDisable = maxLoginAttemptsBeforeDisableConfig != null ? Integer.parseInt(maxLoginAttemptsBeforeDisableConfig) : 10; // Valeur par défaut
+
+        if (tentatives >= maxLoginAttempts && tentatives < maxLoginAttemptsBeforeDisable) {
             user.setBlocked(true);
         }
 
-        if (tentatives >= 5) {
+        if (tentatives >= maxLoginAttemptsBeforeDisable) {
             user.setDisabled(true);
         }
 
         userRepository.save(user);
     }
+
 
     public User findByUsername(String username) {
         return userRepository.findByUsername(username).orElseThrow(() -> new UsernameNotFoundException("User Not Found with username: " + username));
