@@ -1,5 +1,6 @@
 package com.gti619.spring.login.models;
 
+import java.util.Date;
 import java.util.HashSet;
 import java.util.Set;
 
@@ -37,6 +38,18 @@ public class User {
              joinColumns = @JoinColumn(name = "user_id"),
              inverseJoinColumns = @JoinColumn(name = "role_id"))
   private Set<Role> roles = new HashSet<>();
+
+
+  private boolean blocked;
+
+  @Column(name = "last_login")
+  private Date lastLogin;
+
+  @Column(name = "login_attempt")
+  private Date loginAttempt;
+
+  @Column(name = "tentatives")
+  private Integer tentatives;
 
   public User() {
   }
@@ -81,6 +94,44 @@ public class User {
 
   public Set<Role> getRoles() {
     return roles;
+  }
+
+
+  public boolean getBlocked() {
+    return blocked;
+  }
+
+  public void setBlocked(boolean blocked) {
+    this.blocked = blocked;
+  }
+
+  public Date getLastLogin() {
+    return lastLogin;
+  }
+
+  public void setLastLogin(Date lastLogin) {
+    this.lastLogin = lastLogin;
+  }
+
+  public Date getLoginAttempt() {
+    return loginAttempt;
+  }
+
+  public void setLoginAttempt(Date loginAttempt) {
+    this.loginAttempt = loginAttempt;
+  }
+
+
+  public boolean isBlocked() {
+    return blocked;
+  }
+
+  public Integer getTentatives() {
+    return tentatives;
+  }
+
+  public void setTentatives(Integer tentatives) {
+    this.tentatives = tentatives;
   }
 
   public void setRoles(Set<Role> roles) {

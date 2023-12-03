@@ -4,9 +4,12 @@ import com.gti619.spring.login.models.User;
 import com.gti619.spring.login.payload.response.UserInfoResponse;
 import com.gti619.spring.login.repository.UserRepository;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.security.core.userdetails.UsernameNotFoundException;
 import org.springframework.stereotype.Service;
 
+import java.util.Date;
 import java.util.List;
+import java.util.Optional;
 import java.util.stream.Collectors;
 
 @Service
@@ -37,4 +40,39 @@ public class UserService {
 
         return userInfos;
     }
+
+    public void updateTentatives(Long id) throws UsernameNotFoundException {
+        User user = userRepository.findById(id)
+                .orElseThrow(() -> new UsernameNotFoundException("User Not Found with id: " + id));
+
+        user.setTentatives(user.getTentatives()+1);
+
+        userRepository.save(user);
+    }
+
+    public void updateLastLogin(Long userId) {
+        User user = userRepository.findById(userId).orElseThrow(() -> new UsernameNotFoundException("User Not Found with id: " + userId));
+        user.setLastLogin(new Date());
+        userRepository.save(user);
+    }
+
+    public void handleFailedLogin(String username) {
+        User user = userRepository.findByUsername(username).orElseThrow(() -> new UsernameNotFoundException("User Not Found with username: " + username));
+        Integer tentatives = user.getTentatives() == null ? 0 : user.getTentatives();
+        user.setLoginAttempt(new Date());
+        user.setTentatives(tentatives + 1);
+
+        if (tentatives >= 5) {
+            user.setBlocked(true);
+        }
+
+        userRepository.save(user);
+    }
+
+    public User findByUsername(String username) {
+        return userRepository.findByUsername(username).orElseThrow(() -> new UsernameNotFoundException("User Not Found with username: " + username));
+
+    }
+
+
 }

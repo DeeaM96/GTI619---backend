@@ -11,9 +11,12 @@ public class ChangePasswordRequest {
     private Long userId;
     private String userPassword;
 
-    public ChangePasswordRequest(Long userId, String userPassword) {
+    private boolean blocked;
+
+    public ChangePasswordRequest(Long userId, String userPassword, boolean blocked) {
         this.userId = userId;
         this.userPassword = userPassword;
+        this.blocked = blocked;
     }
 
     public ChangePasswordRequest() {
