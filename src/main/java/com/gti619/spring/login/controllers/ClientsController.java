@@ -8,7 +8,7 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
-@CrossOrigin(origins = "http://localhost:4200,http://localhost:4200", maxAge = 3600, allowCredentials="true")
+@CrossOrigin(origins = {"http://localhost:4200", "https://localhost:4200"}, maxAge = 3600, allowCredentials="true")
 
 @RestController
 @RequestMapping("/api/clients")

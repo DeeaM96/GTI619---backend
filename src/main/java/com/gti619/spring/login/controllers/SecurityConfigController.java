@@ -9,7 +9,7 @@ import org.springframework.web.bind.annotation.*;
 import java.util.Map;
 
 @RestController
-@CrossOrigin(origins = "http://localhost:4200", maxAge = 3600, allowCredentials = "true")
+@CrossOrigin(origins = {"http://localhost:4200", "https://localhost:4200"}, maxAge = 3600, allowCredentials = "true")
 @RequestMapping("/api/security-settings")
 public class SecurityConfigController {
 

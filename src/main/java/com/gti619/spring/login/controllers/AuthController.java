@@ -45,7 +45,7 @@ import com.gti619.spring.login.repository.UserRepository;
 import com.gti619.spring.login.security.services.UserDetailsImpl;
 
 //for Angular Client (withCredentials)
-@CrossOrigin(origins = "http://localhost:4200,http://localhost:4200", maxAge = 3600, allowCredentials = "true")
+@CrossOrigin(origins = {"http://localhost:4200", "https://localhost:4200"}, maxAge = 3600, allowCredentials = "true")
 //@CrossOrigin(origins = "*", maxAge = 3600)
 @RestController
 @RequestMapping("/api/auth")
@@ -287,16 +287,21 @@ public class AuthController {
     }
 
 
-    @GetMapping("/isValid/{userId}")
+    @GetMapping("/isValid")
     @PreAuthorize("hasRole('ROLE_USER') or hasRole('ROLE_PREP_RES') or hasRole('ROLE_ADMIN') or hasRole('ROLE_PREP_AFF')")
-    public ResponseEntity<?> isValid(@PathVariable Long userId) {
-        User user = userRepository.findById(userId)
+    public ResponseEntity<?> isValid() {
+
+
+        Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
+
+
+        UserDetailsImpl userDetails = (UserDetailsImpl) authentication.getPrincipal();
+
+        User user = userRepository.findById(userDetails.getId())
                 .orElseThrow(() -> new RuntimeException("Erreur: User non trouvé."));
 
         // Supprimer les rôles existants
         CheckValidResponse isValid= new CheckValidResponse(user.isRelogin());
-
-        // Ajouter les nouveaux rôles
 
 
         return ResponseEntity.ok(isValid);
@@ -304,12 +309,14 @@ public class AuthController {
 
 
     @PostMapping("/change-password")
+    @PreAuthorize("hasRole('ROLE_USER') or hasRole('ROLE_PREP_RES') or hasRole('ROLE_ADMIN') or hasRole('ROLE_PREP_AFF')")
     public ResponseEntity<?> changeUserPassword(@RequestBody ChangePasswordRequest changePasswordRequest) {
         Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
 
         // Check if the user has the ADMIN role
         boolean isAdmin = authentication.getAuthorities().stream()
                 .anyMatch(authority -> authority.getAuthority().equals("ROLE_ADMIN"));
+
 
         String activity_type=isAdmin? "ADMIN_PASSWORD_CHANGE" : "PASSWORD_CHANGE";
 
