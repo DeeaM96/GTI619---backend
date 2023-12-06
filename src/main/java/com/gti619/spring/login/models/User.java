@@ -44,6 +44,8 @@ public class User {
 
   private boolean disabled;
 
+  private boolean relogin;
+
   @Column(name = "last_login")
   private Date lastLogin;
 
@@ -146,5 +148,13 @@ public class User {
 
   public void setDisabled(boolean disabled) {
     this.disabled = disabled;
+  }
+
+  public boolean isRelogin() {
+    return relogin;
+  }
+
+  public void setRelogin(boolean relogin) {
+    this.relogin = relogin;
   }
 }

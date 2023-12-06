@@ -28,6 +28,8 @@ public class UserDetailsImpl implements UserDetails {
 
   private boolean blocked;
 
+  private boolean relogin;
+
 
   private Date lastLogin;
 
@@ -48,7 +50,7 @@ public class UserDetailsImpl implements UserDetails {
     this.authorities = authorities;
   }
 
-  public UserDetailsImpl(Long id, String username, String email, String password, boolean blocked, Date lastLogin, Date loginAttempt, Integer tentatives, Collection<? extends GrantedAuthority> authorities) {
+  public UserDetailsImpl(Long id, String username, String email, String password, boolean blocked, Date lastLogin, Date loginAttempt, Integer tentatives, boolean relogin, Collection<? extends GrantedAuthority> authorities) {
     this.id = id;
     this.username = username;
     this.email = email;
@@ -58,6 +60,7 @@ public class UserDetailsImpl implements UserDetails {
     this.loginAttempt = loginAttempt;
     this.tentatives = tentatives;
     this.authorities = authorities;
+    this.relogin=relogin;
   }
 
   public static UserDetailsImpl build(User user) {
@@ -74,6 +77,7 @@ public class UserDetailsImpl implements UserDetails {
             user.getLastLogin(),
             user.getLoginAttempt(),
             user.getTentatives(),
+            user.isRelogin(),
             authorities);
   }
 
@@ -165,6 +169,14 @@ public class UserDetailsImpl implements UserDetails {
 
   public void setAuthorities(Collection<? extends GrantedAuthority> authorities) {
     this.authorities = authorities;
+  }
+
+  public boolean isRelogin() {
+    return relogin;
+  }
+
+  public void setRelogin(boolean relogin) {
+    this.relogin = relogin;
   }
 
   @Override

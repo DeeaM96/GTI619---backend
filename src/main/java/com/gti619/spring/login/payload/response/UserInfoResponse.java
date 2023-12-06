@@ -11,6 +11,9 @@ public class UserInfoResponse {
 
 	private boolean blocked;
 
+	private boolean relogin;
+
+
 
 	private Date lastLogin;
 
@@ -27,7 +30,7 @@ public class UserInfoResponse {
 		this.roles = roles;
 	}
 
-	public UserInfoResponse(Long id, String username, String email, List<String> roles, boolean blocked, Date lastLogin, Date loginAttempt, Integer tentatives) {
+	public UserInfoResponse(Long id, String username, String email, List<String> roles, boolean blocked, Date lastLogin, Date loginAttempt, Integer tentatives,boolean relogin) {
 		this.id = id;
 		this.username = username;
 		this.email = email;
@@ -36,6 +39,7 @@ public class UserInfoResponse {
 		this.lastLogin = lastLogin;
 		this.loginAttempt = loginAttempt;
 		this.tentatives = tentatives;
+		this.relogin=relogin;
 	}
 
 	public UserInfoResponse(Long id, String username, boolean blocked) {
@@ -108,5 +112,13 @@ public class UserInfoResponse {
 
 	public void setTentatives(Integer tentatives) {
 		this.tentatives = tentatives;
+	}
+
+	public boolean isRelogin() {
+		return relogin;
+	}
+
+	public void setRelogin(boolean relogin) {
+		this.relogin = relogin;
 	}
 }

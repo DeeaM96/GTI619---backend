@@ -7,10 +7,8 @@ import java.util.Set;
 import java.util.stream.Collectors;
 
 import com.gti619.spring.login.models.PasswordHistory;
-import com.gti619.spring.login.payload.request.ChangePasswordRequest;
-import com.gti619.spring.login.payload.request.UpdateRoleRequest;
-import com.gti619.spring.login.payload.request.LoginRequest;
-import com.gti619.spring.login.payload.request.SignupRequest;
+import com.gti619.spring.login.payload.request.*;
+import com.gti619.spring.login.payload.response.CheckValidResponse;
 import com.gti619.spring.login.payload.response.MessageResponse;
 import com.gti619.spring.login.payload.response.UserBlockedResponse;
 import com.gti619.spring.login.payload.response.UserInfoResponse;
@@ -37,11 +35,7 @@ import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.core.userdetails.UsernameNotFoundException;
 import org.springframework.security.crypto.password.PasswordEncoder;
-import org.springframework.web.bind.annotation.CrossOrigin;
-import org.springframework.web.bind.annotation.PostMapping;
-import org.springframework.web.bind.annotation.RequestBody;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.bind.annotation.*;
 
 import com.gti619.spring.login.models.ERole;
 import com.gti619.spring.login.models.Role;
@@ -142,7 +136,11 @@ public class AuthController {
                         ));
             }
 
+            user.setRelogin(false);
+
             userActivityService.logUserActivity(user.getId(), "LOGIN", true,null);
+
+
 
             return ResponseEntity.ok().header(HttpHeaders.SET_COOKIE, jwtCookie.toString())
                     .body(new UserInfoResponse(userDetails.getId(),
@@ -152,7 +150,8 @@ public class AuthController {
                             userDetails.isBlocked(),
                             userDetails.getLastLogin(),
                             userDetails.getLoginAttempt(),
-                            userDetails.getTentatives()
+                            userDetails.getTentatives(),
+                            userDetails.isRelogin()
                     ));
 
         } catch (BadCredentialsException e) {
@@ -176,6 +175,8 @@ public class AuthController {
         User user = new User(signUpRequest.getUsername(),
                 signUpRequest.getEmail(),
                 encoder.encode(signUpRequest.getPassword()));
+
+        user.setTentatives(0);
 
         Set<String> strRoles = signUpRequest.getRole();
         Set<Role> roles = new HashSet<>();
@@ -286,6 +287,22 @@ public class AuthController {
     }
 
 
+    @GetMapping("/isValid/{userId}")
+    @PreAuthorize("hasRole('ROLE_USER') or hasRole('ROLE_PREP_RES') or hasRole('ROLE_ADMIN') or hasRole('ROLE_PREP_AFF')")
+    public ResponseEntity<?> isValid(@PathVariable Long userId) {
+        User user = userRepository.findById(userId)
+                .orElseThrow(() -> new RuntimeException("Erreur: User non trouvé."));
+
+        // Supprimer les rôles existants
+        CheckValidResponse isValid= new CheckValidResponse(user.isRelogin());
+
+        // Ajouter les nouveaux rôles
+
+
+        return ResponseEntity.ok(isValid);
+    }
+
+
     @PostMapping("/change-password")
     public ResponseEntity<?> changeUserPassword(@RequestBody ChangePasswordRequest changePasswordRequest) {
         Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
@@ -332,6 +349,7 @@ public class AuthController {
                 user.setBlocked(false);
                 user.setDisabled(false);
                 user.setTentatives(0);
+                user.setRelogin(true);
             }
             userRepository.save(user);
 
