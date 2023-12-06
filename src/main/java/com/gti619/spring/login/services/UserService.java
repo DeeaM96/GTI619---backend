@@ -43,7 +43,7 @@ public class UserService {
 
     public void updateTentatives(Long id) throws UsernameNotFoundException {
         User user = userRepository.findById(id)
-                .orElseThrow(() -> new UsernameNotFoundException("User Not Found with id: " + id));
+                .orElseThrow(() -> new UsernameNotFoundException("Utilisateur non trouvé avec l'id: " + id));
 
         user.setTentatives(user.getTentatives()+1);
 
@@ -51,7 +51,7 @@ public class UserService {
     }
 
     public void updateLastLogin(Long userId) {
-        User user = userRepository.findById(userId).orElseThrow(() -> new UsernameNotFoundException("User Not Found with id: " + userId));
+        User user = userRepository.findById(userId).orElseThrow(() -> new UsernameNotFoundException("Utilisateur non trouvé avec l'id: " + userId));
         user.setLastLogin(new Date());
         userRepository.save(user);
     }
@@ -61,7 +61,7 @@ public class UserService {
 
     public void handleFailedLogin(String username) {
         User user = userRepository.findByUsername(username)
-                .orElseThrow(() -> new UsernameNotFoundException("User Not Found with username: " + username));
+                .orElseThrow(() -> new UsernameNotFoundException("Utilisateur non trouvé avec le nom d'utilisateur: " + username));
 
         Integer tentatives = user.getTentatives() == null ? 0 : user.getTentatives();
         user.setLoginAttempt(new Date());
@@ -86,7 +86,7 @@ public class UserService {
 
 
     public User findByUsername(String username) {
-        return userRepository.findByUsername(username).orElseThrow(() -> new UsernameNotFoundException("User Not Found with username: " + username));
+        return userRepository.findByUsername(username).orElseThrow(() -> new UsernameNotFoundException("Utilisateur non trouvé avec le nom d'utilisateur: " + username));
 
     }
 

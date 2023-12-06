@@ -14,25 +14,25 @@ import org.springframework.web.bind.annotation.RestController;
 public class BoardsController {
   @GetMapping("/all")
   public String allAccess() {
-    return "Public Content.";
+    return "Contenu tous rôles";
   }
 
   @GetMapping("/user")
   @PreAuthorize("hasRole('ROLE_USER') or hasRole('ROLE_PREP_RES') or hasRole('ROLE_ADMIN') or hasRole('ROLE_PREP_AFF')")
   public String userAccess() {
-    return "User Content.";
+    return "Contenu utilisateur";
   }
 
   @GetMapping("/prep_res")
   @PreAuthorize("hasRole('ROLE_PREP_RES') or hasRole('ROLE_ADMIN')  ")
   public String prep_res_access() {
-    return "ROLE_PREP_RES Board.";
+    return "Tableau de bord ROLE_PREP_RES";
   }
 
   @GetMapping("/prep_aff")
   @PreAuthorize("hasRole('ROLE_PREP_AFF') or hasRole('ROLE_ADMIN') ")
   public String prep_aff_access() {
-    return "ROLE_PREP_AFF Board.";
+    return "Tableau de bord ROLE_PREP_AFF Board";
   }
 
 
@@ -45,7 +45,7 @@ public class BoardsController {
   @GetMapping("/admin")
   @PreAuthorize("hasRole('ROLE_ADMIN')")
   public String adminAccess() {
-    return "Admin Board.";
+    return "Tableau de bord administrateur";
   }
 
 
