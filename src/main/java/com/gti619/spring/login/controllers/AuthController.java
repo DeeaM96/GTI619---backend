@@ -83,7 +83,7 @@ public class AuthController {
     @Autowired
     SecurityConfigService securityConfigService;
 
-    @PostMapping("/connexion")
+   @PostMapping("/signin")
     public ResponseEntity<?> authenticateUser(@Valid @RequestBody LoginRequest loginRequest) {
         try {
             Authentication authentication = authenticationManager
@@ -162,7 +162,7 @@ public class AuthController {
         }
     }
 
-    @PostMapping("/inscription")
+    @PostMapping("/signup")
     public ResponseEntity<?> registerUser(@Valid @RequestBody SignupRequest signUpRequest) {
         if (userRepository.existsByUsername(signUpRequest.getUsername())) {
             return ResponseEntity.badRequest().body(new MessageResponse("Erreur: Nom d'utilisateur déjà utilisé!"));
@@ -219,7 +219,7 @@ public class AuthController {
         return ResponseEntity.ok(new MessageResponse("Utilisateur enregistré avec succès!"));
     }
 
-    @PostMapping("/creationUtilisateur")
+    @PostMapping("/createUser")
     @PreAuthorize("hasRole('ROLE_ADMIN') ")
     public ResponseEntity<?> createUser(@Valid @RequestBody SignupRequest signUpRequest) {
         String validationMessage = validatePassword(signUpRequest.getPassword());
@@ -230,7 +230,7 @@ public class AuthController {
     }
 
 
-    @PostMapping("/deconnexion")
+    @PostMapping("/signout")
     public ResponseEntity<?> logoutUser() {
         ResponseCookie cookie = jwtUtils.getCleanJwtCookie();
         return ResponseEntity.ok().header(HttpHeaders.SET_COOKIE, cookie.toString())
@@ -238,7 +238,7 @@ public class AuthController {
     }
 
 
-    @PostMapping("/modifierRole")
+    @PostMapping("/updateRole")
     @PreAuthorize("hasRole('ROLE_ADMIN')")
     public ResponseEntity<?> updateRole(@Valid @RequestBody UpdateRoleRequest updateRoleRequest) {
         User user = userRepository.findByUsername(updateRoleRequest.getUsername())
@@ -286,7 +286,7 @@ public class AuthController {
     }
 
 
-    @PostMapping("/changement-motdepasse")
+    @PostMapping("/change-password")
     public ResponseEntity<?> changeUserPassword(@RequestBody ChangePasswordRequest changePasswordRequest) {
         Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
 
