@@ -83,7 +83,7 @@ public class AuthController {
     @Autowired
     SecurityConfigService securityConfigService;
 
-    @PostMapping("/signin")
+    @PostMapping("/connexion")
     public ResponseEntity<?> authenticateUser(@Valid @RequestBody LoginRequest loginRequest) {
         try {
             Authentication authentication = authenticationManager
@@ -101,7 +101,7 @@ public class AuthController {
                 long timeSinceLastAttempt = new Date().getTime() - user.getLoginAttempt().getTime();
                 if (timeSinceLastAttempt < waitTime) {
                     long remainingTime = waitTime - timeSinceLastAttempt;
-                    String errorMessage = "Login attempt blocked. Please try again after " + remainingTime / 1000 + " seconds.";
+                    String errorMessage = "Tentative de connexion bloquée. Veuillez réessayer après " + remainingTime / 1000 + " secondes.";
                     userActivityService.logUserActivity(user.getId(), "LOGIN", false, errorMessage);
 
                     return ResponseEntity
@@ -111,7 +111,7 @@ public class AuthController {
             }
 
             if(user.isDisabled()){
-                String errorMessage="Login attempt blocked. Please contact an administrator";
+                String errorMessage="Tentative de connexion bloquée. Veuillez contacter un administrateur";
                 userActivityService.logUserActivity(user.getId(), "LOGIN", false,errorMessage);
 
                 return ResponseEntity
@@ -130,7 +130,7 @@ public class AuthController {
 
 
             if (user.getBlocked()) {
-                userActivityService.logUserActivity(user.getId(), "LOGIN", false,"User blocked, must change password");
+                userActivityService.logUserActivity(user.getId(), "LOGIN", false,"Utalisateur bloqué, veuillez changer votre mot de passe");
 
                 return ResponseEntity
                         .status(HttpStatus.FORBIDDEN).header(HttpHeaders.SET_COOKIE, jwtCookie.toString())
@@ -162,14 +162,14 @@ public class AuthController {
         }
     }
 
-    @PostMapping("/signup")
+    @PostMapping("/inscription")
     public ResponseEntity<?> registerUser(@Valid @RequestBody SignupRequest signUpRequest) {
         if (userRepository.existsByUsername(signUpRequest.getUsername())) {
-            return ResponseEntity.badRequest().body(new MessageResponse("Error: Username is already taken!"));
+            return ResponseEntity.badRequest().body(new MessageResponse("Erreur: Nom d'utilisateur déjà utilisé!"));
         }
 
         if (userRepository.existsByEmail(signUpRequest.getEmail())) {
-            return ResponseEntity.badRequest().body(new MessageResponse("Error: Email is already in use!"));
+            return ResponseEntity.badRequest().body(new MessageResponse("Erreur: Email déjà utilisé!"));
         }
 
         // Create new user's account
@@ -182,32 +182,32 @@ public class AuthController {
 
         if (strRoles == null) {
             Role userRole = roleRepository.findByName(ERole.ROLE_USER)
-                    .orElseThrow(() -> new RuntimeException("Error: Role is not found."));
+                    .orElseThrow(() -> new RuntimeException("Erreur: Rôle non trouvé."));
             roles.add(userRole);
         } else {
             strRoles.forEach(role -> {
                 switch (role) {
                     case "admin":
                         Role adminRole = roleRepository.findByName(ERole.ROLE_ADMIN)
-                                .orElseThrow(() -> new RuntimeException("Error: Role is not found."));
+                                .orElseThrow(() -> new RuntimeException("Erreur: Rôle non trouvé."));
                         roles.add(adminRole);
 
                         break;
                     case "prep_aff":
                         Role role_prep_aff = roleRepository.findByName(ERole.ROLE_PREP_AFF)
-                                .orElseThrow(() -> new RuntimeException("Error: Role is not found."));
+                                .orElseThrow(() -> new RuntimeException("Erreur: Rôle non trouvé."));
                         roles.add(role_prep_aff);
 
                         break;
                     case "prep_res":
                         Role role_prep_red = roleRepository.findByName(ERole.ROLE_PREP_RES)
-                                .orElseThrow(() -> new RuntimeException("Error: Role is not found."));
+                                .orElseThrow(() -> new RuntimeException("Erreur: Rôle non trouvé."));
                         roles.add(role_prep_red);
 
                         break;
                     default:
                         Role userRole = roleRepository.findByName(ERole.ROLE_USER)
-                                .orElseThrow(() -> new RuntimeException("Error: Role is not found."));
+                                .orElseThrow(() -> new RuntimeException("Erreur: Rôle non trouvé."));
                         roles.add(userRole);
                 }
             });
@@ -216,10 +216,10 @@ public class AuthController {
         user.setRoles(roles);
         userRepository.save(user);
 
-        return ResponseEntity.ok(new MessageResponse("User registered successfully!"));
+        return ResponseEntity.ok(new MessageResponse("Utilisateur enregistré avec succès!"));
     }
 
-    @PostMapping("/createUser")
+    @PostMapping("/creationUtilisateur")
     @PreAuthorize("hasRole('ROLE_ADMIN') ")
     public ResponseEntity<?> createUser(@Valid @RequestBody SignupRequest signUpRequest) {
         String validationMessage = validatePassword(signUpRequest.getPassword());
@@ -230,47 +230,47 @@ public class AuthController {
     }
 
 
-    @PostMapping("/signout")
+    @PostMapping("/deconnexion")
     public ResponseEntity<?> logoutUser() {
         ResponseCookie cookie = jwtUtils.getCleanJwtCookie();
         return ResponseEntity.ok().header(HttpHeaders.SET_COOKIE, cookie.toString())
-                .body(new MessageResponse("You've been signed out!"));
+                .body(new MessageResponse("Vous avez été déconnecté avec succès!"));
     }
 
 
-    @PostMapping("/updateRole")
+    @PostMapping("/modifierRole")
     @PreAuthorize("hasRole('ROLE_ADMIN')")
     public ResponseEntity<?> updateRole(@Valid @RequestBody UpdateRoleRequest updateRoleRequest) {
         User user = userRepository.findByUsername(updateRoleRequest.getUsername())
-                .orElseThrow(() -> new RuntimeException("Error: User is not found."));
+                .orElseThrow(() -> new RuntimeException("Erreur: Rôle non trouvé."));
 
-        // Clear existing roles
+        // Supprimer les rôles existants
         user.getRoles().clear();
 
-        // Add new roles
+        // Ajouter les nouveaux rôles
         Set<Role> updatedRoles = new HashSet<>();
 
         Set<String> strRoles = updateRoleRequest.getNewRoles();
         if (strRoles == null) {
             Role userRole = roleRepository.findByName(ERole.ROLE_USER)
-                    .orElseThrow(() -> new RuntimeException("Error: Role is not found."));
+                    .orElseThrow(() -> new RuntimeException("Erreur: Rôle non trouvé."));
             updatedRoles.add(userRole);
         } else {
             updateRoleRequest.getNewRoles().forEach(role -> {
                 switch (role) {
                     case "admin":
                         Role adminRole = roleRepository.findByName(ERole.ROLE_ADMIN)
-                                .orElseThrow(() -> new RuntimeException("Error: Role is not found."));
+                                .orElseThrow(() -> new RuntimeException("Erreur: Rôle non trouvé."));
                         updatedRoles.add(adminRole);
                         break;
                     case "prep_aff":
                         Role role_prep_aff = roleRepository.findByName(ERole.ROLE_PREP_AFF)
-                                .orElseThrow(() -> new RuntimeException("Error: Role is not found."));
+                                .orElseThrow(() -> new RuntimeException("Erreur: Rôle non trouvé."));
                         updatedRoles.add(role_prep_aff);
                         break;
                     case "prep_res":
                         Role role_prep_red = roleRepository.findByName(ERole.ROLE_PREP_RES)
-                                .orElseThrow(() -> new RuntimeException("Error: Role is not found."));
+                                .orElseThrow(() -> new RuntimeException("Erreur: Rôle non trouvé."));
                         updatedRoles.add(role_prep_red);
                         break;
 
@@ -282,11 +282,11 @@ public class AuthController {
         user.setRoles(updatedRoles);
         userRepository.save(user);
 
-        return ResponseEntity.ok(new MessageResponse("User roles updated successfully!"));
+        return ResponseEntity.ok(new MessageResponse("Rôle(s) modifié(s) avec succès!"));
     }
 
 
-    @PostMapping("/change-password")
+    @PostMapping("/changement-motdepasse")
     public ResponseEntity<?> changeUserPassword(@RequestBody ChangePasswordRequest changePasswordRequest) {
         Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
 
@@ -299,7 +299,7 @@ public class AuthController {
 
         try {
             User user = userRepository.findById(changePasswordRequest.getUserId())
-                    .orElseThrow(() -> new UsernameNotFoundException("User Not Found with id: " + changePasswordRequest.getUserId()));
+                    .orElseThrow(() -> new UsernameNotFoundException("Utilisateur non trouvé avec le nom: " + changePasswordRequest.getUserId()));
 
             String reuseConfig = securityConfigService.getConfigValue("PASSWORD_REUSE_HISTORY");
             int reuseHistory = reuseConfig != null ? Integer.parseInt(reuseConfig) : 5; // Default to 5 if not configured
@@ -311,7 +311,7 @@ public class AuthController {
                     .anyMatch(history -> encoder.matches(changePasswordRequest.getUserPassword(), history.getPassword()));
 
             if (isRepeated) {
-                String errorMessage = "The new password cannot be the same as the last " + reuseHistory + " passwords.";
+                String errorMessage = "Le nouveau mot de passe doit être différent des anciens " + reuseHistory + " passwords.";
                 userActivityService.logUserActivity(user.getId(), "PASSWORD_CHANGE", false, errorMessage);
 
                 return ResponseEntity.badRequest().body(errorMessage);
@@ -343,7 +343,7 @@ public class AuthController {
 
             userActivityService.logUserActivity(user.getId(), activity_type, true, null);
 
-            return ResponseEntity.ok(new MessageResponse("Password changed successfully!"));
+            return ResponseEntity.ok(new MessageResponse("Mot de passe modifié avec succès!"));
         } catch (UsernameNotFoundException e) {
             return new ResponseEntity<>(e.getMessage(), HttpStatus.NOT_FOUND);
         }
